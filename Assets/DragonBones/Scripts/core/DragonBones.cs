@@ -307,7 +307,7 @@ namespace DragonBones
         public static bool yDown = true;
         public static bool debug = false;
         public static bool debugDraw = false;
-        public static readonly string VERSION = "5.6.300";
+        public static readonly string VERSION = "5.6.301";
 
         private readonly WorldClock _clock = new WorldClock();
         private readonly List<EventObject> _events = new List<EventObject>();
@@ -317,6 +317,14 @@ namespace DragonBones
         public DragonBones(IEventDispatcher<EventObject> eventManager)
         {
             this._eventManager = eventManager;
+        }
+
+        public void ClockAdvanceTime(float passedTime)
+        {
+            if (this._clock != null)
+            {
+                this._clock.AdvanceTime(passedTime);
+            }
         }
 
         public void AdvanceTime(float passedTime)
