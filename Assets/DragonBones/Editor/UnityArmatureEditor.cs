@@ -106,6 +106,10 @@ namespace DragonBones
 
                 // Load data.
                 var dragonBonesData = UnityFactory.factory.LoadData(_armatureComponent.unityData);
+                if (dragonBonesData == null)
+                {
+                    return;
+                }
 
                 // Refresh texture atlas.
                 UnityFactory.factory.RefreshAllTextureAtlas(_armatureComponent);

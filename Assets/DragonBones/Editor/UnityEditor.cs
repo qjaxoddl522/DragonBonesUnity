@@ -31,6 +31,16 @@ namespace DragonBones
 {
     public class UnityEditor
     {
+        static UnityEditor()
+        {
+            Helper.OnError += OnDragonBonesError;
+        }
+
+        private static void OnDragonBonesError(string message)
+        {
+            EditorUtility.DisplayDialog("DragonBones Error", message, "OK");
+        }
+
         [MenuItem("GameObject/DragonBones/Armature Object", false, 10)]
         private static void _CreateArmatureObjectMenuItem()
         {

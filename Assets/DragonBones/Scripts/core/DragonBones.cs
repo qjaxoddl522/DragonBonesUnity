@@ -249,15 +249,21 @@ namespace DragonBones
         Single = 5
     }
 
-    internal static class Helper
+    public static class Helper
     {
         public static readonly int INT16_SIZE = 2;
         public static readonly int UINT16_SIZE = 2;
         public static readonly int FLOAT_SIZE = 4;
 
-        internal static void Assert(bool condition, string message)
+        public static Action<string> OnError;
+
+        public static void Assert(bool condition, string message)
         {
-            Debug.Assert(condition, message);
+            if (!condition)
+            {
+                OnError?.Invoke(message);
+                Debug.Assert(condition, message);
+            }
         }
 
         internal static void ResizeList<T>(this List<T> list, int count, T value = default(T))
