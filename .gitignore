@@ -79,4 +79,8 @@ Logs/
 ProjectSettings/
 UserSettings/
 *.meta
+Assets/testData/
+dragonBonesRuntime6/
+doc/
+.claude/
 

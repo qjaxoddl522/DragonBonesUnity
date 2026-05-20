@@ -480,6 +480,48 @@ namespace DragonBones
                 }
             }
 
+            // 处理 TransformConstraint (6.0新增)
+            if (rawData.ContainsKey(ObjectDataParser.TRANSFORM_CONSTRAINT))
+            {
+                var rawTransformConstraints = rawData[ObjectDataParser.TRANSFORM_CONSTRAINT] as List<object>;
+                foreach (Dictionary<string, object> rawTransCon in rawTransformConstraints)
+                {
+                    var constraint = this._ParseTransformConstraint(rawTransCon);
+                    if (constraint != null)
+                    {
+                        armature.AddConstraint(constraint);
+                    }
+                }
+            }
+
+            // 处理 PhysicsConstraint (6.0新增)
+            if (rawData.ContainsKey(ObjectDataParser.PHYSICS))
+            {
+                var rawPhysicsConstraints = rawData[ObjectDataParser.PHYSICS] as List<object>;
+                foreach (Dictionary<string, object> rawPhysicsCon in rawPhysicsConstraints)
+                {
+                    var constraint = this._ParsePhysicsConstraint(rawPhysicsCon);
+                    if (constraint != null)
+                    {
+                        armature.AddConstraint(constraint);
+                    }
+                }
+            }
+
+            // 处理 PathConstraint (6.0新增)
+            if (rawData.ContainsKey(ObjectDataParser.PATH_CONSTRAINT))
+            {
+                var rawPathConstraints = rawData[ObjectDataParser.PATH_CONSTRAINT] as List<object>;
+                foreach (Dictionary<string, object> rawPathCon in rawPathConstraints)
+                {
+                    var constraint = this._ParsePathConstraint(rawPathCon);
+                    if (constraint != null)
+                    {
+                        armature.AddConstraint(constraint);
+                    }
+                }
+            }
+
             armature.SortBones();
 
             if (rawData.ContainsKey(ObjectDataParser.SLOT))
@@ -631,6 +673,27 @@ namespace DragonBones
             }
 
             return constraint;
+        }
+
+        protected ConstraintData _ParseTransformConstraint(Dictionary<string, object> rawData)
+        {
+            // TODO: 完整实现 TransformConstraint 解析
+            // 当前空实现保证加载6.0数据不报错
+            return null;
+        }
+
+        protected ConstraintData _ParsePhysicsConstraint(Dictionary<string, object> rawData)
+        {
+            // TODO: 完整实现 PhysicsConstraint 解析
+            // 当前空实现保证加载6.0数据不报错
+            return null;
+        }
+
+        protected ConstraintData _ParsePathConstraint(Dictionary<string, object> rawData)
+        {
+            // TODO: 完整实现 PathConstraint 解析
+            // 当前空实现保证加载6.0数据不报错
+            return null;
         }
 
         private SlotData _ParseSlot(Dictionary<string, object> rawData, int zOrder)

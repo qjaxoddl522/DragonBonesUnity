@@ -34,9 +34,11 @@ namespace DragonBones
         protected const string DATA_VERSION_4_5 = "4.5";
         protected const string DATA_VERSION_5_0 = "5.0";
         protected const string DATA_VERSION_5_5 = "5.5";
-        protected const string DATA_VERSION = DATA_VERSION_5_5;
+        protected const string DATA_VERSION_6_0 = "6.0";
+        protected const string DATA_VERSION = DATA_VERSION_6_0;
         protected static readonly List<string> DATA_VERSIONS = new List<string>()
         {
+            DATA_VERSION_6_0,
             DATA_VERSION_5_5,
             DATA_VERSION_5_0,
             DATA_VERSION_4_5,
@@ -64,6 +66,12 @@ namespace DragonBones
         protected const string SLOT = "slot";
         protected const string CONSTRAINT = "constraint";
         protected const string IK = "ik";
+        protected const string TRANSFORM_CONSTRAINT = "transform";
+        protected const string PHYSICS = "physics";
+        protected const string PATH_CONSTRAINT = "path";
+        protected const string PATH_CONSTRAINT_POSITION = "position";
+        protected const string PATH_CONSTRAINT_SPACING = "spacing";
+        protected const string PATH_CONSTRAINT_WEIGHT = "weight";
         
         protected const string SKIN = "skin";
         protected const string DISPLAY = "display";
