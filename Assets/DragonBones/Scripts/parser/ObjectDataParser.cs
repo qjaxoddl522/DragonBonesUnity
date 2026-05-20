@@ -1261,6 +1261,21 @@ namespace DragonBones
 
             return animation;
         }
+        protected int _GetTimelineDuration(List<object> rawFrames)
+        {
+            if (rawFrames == null || rawFrames.Count == 0)
+            {
+                return 0;
+            }
+
+            int duration = 0;
+            foreach (Dictionary<string, object> rawFrame in rawFrames)
+            {
+                duration += ObjectDataParser._GetNumber(rawFrame, ObjectDataParser.DURATION, 1);
+            }
+            return duration;
+        }
+
         protected TimelineData _ParseTimeline(
                                                 Dictionary<string, object> rawData, List<object> rawFrames, string framesKey, TimelineType type,
                                                 bool addIntOffset, bool addFloatOffset, uint frameValueCount,
@@ -1287,18 +1302,37 @@ namespace DragonBones
             var timeline = BaseObject.BorrowObject<TimelineData>();
             var timelineOffset = this._timelineArray.Count;
 
-            this._timelineArray.ResizeList(this._timelineArray.Count + 1 + 1 + 1 + 1 + 1 + keyFrameCount, (ushort)0);
-            if (rawData != null)
+            // 6.0: TimelineScale, TimelineOffset, TimelineLoop, TimelineDuration,
+            // TimelineKeyFrameCount, TimelineFrameValueCount, TimelineFrameValueOffset, TimelineFrameOffset + keyFrameCount
+            this._timelineArray.ResizeList(this._timelineArray.Count + 1 + 1 + 1 + 1 + 1 + 1 + 1 + keyFrameCount, (ushort)0);
+
+            bool hasTimelineConfig = false;
+            Dictionary<string, object> rawTimelineConfig = null;
+            if (rawData != null && rawData.ContainsKey(ObjectDataParser.TIMELINE_CONFIG))
             {
-                this._timelineArray[timelineOffset + (int)BinaryOffset.TimelineScale] = (ushort)Math.Round(ObjectDataParser._GetNumber(rawData, ObjectDataParser.SCALE, 1.0f) * 100);
-                this._timelineArray[timelineOffset + (int)BinaryOffset.TimelineOffset] = (ushort)Math.Round(ObjectDataParser._GetNumber(rawData, ObjectDataParser.OFFSET, 0.0f) * 100);
+                var rawConfig = rawData[ObjectDataParser.TIMELINE_CONFIG] as Dictionary<string, object>;
+                if (rawConfig != null && framesKey.Length > 0 && rawConfig.ContainsKey(framesKey))
+                {
+                    rawTimelineConfig = rawConfig[framesKey] as Dictionary<string, object>;
+                    hasTimelineConfig = true;
+                }
+            }
+
+            if (hasTimelineConfig && rawTimelineConfig != null)
+            {
+                this._timelineArray[timelineOffset + (int)BinaryOffset.TimelineScale] = (ushort)Math.Round(ObjectDataParser._GetNumber(rawTimelineConfig, ObjectDataParser.SCALE, 1.0f) * 100);
+                this._timelineArray[timelineOffset + (int)BinaryOffset.TimelineOffset] = (ushort)Math.Round(ObjectDataParser._GetNumber(rawTimelineConfig, ObjectDataParser.OFFSET, 0.0f));
+                this._timelineArray[timelineOffset + (int)BinaryOffset.TimelineLoop] = (ushort)(ObjectDataParser._GetBoolean(rawTimelineConfig, ObjectDataParser.LOOP, false) ? 1 : 0);
             }
             else
             {
                 this._timelineArray[timelineOffset + (int)BinaryOffset.TimelineScale] = 100;
                 this._timelineArray[timelineOffset + (int)BinaryOffset.TimelineOffset] = 0;
+                this._timelineArray[timelineOffset + (int)BinaryOffset.TimelineLoop] = 0;
             }
 
+            var timelineDuration = this._GetTimelineDuration(rawFrames);
+            this._timelineArray[timelineOffset + (int)BinaryOffset.TimelineDuration] = (ushort)timelineDuration;
             this._timelineArray[timelineOffset + (int)BinaryOffset.TimelineKeyFrameCount] = (ushort)keyFrameCount;
             this._timelineArray[timelineOffset + (int)BinaryOffset.TimelineFrameValueCount] = (ushort)frameValueCount;
 

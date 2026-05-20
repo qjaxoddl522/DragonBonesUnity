@@ -125,6 +125,8 @@ namespace DragonBones
         protected const string PLAY_TIMES = "playTimes";
         protected const string SCALE = "scale";
         protected const string OFFSET = "offset";
+        protected const string LOOP = "loop";
+        protected const string TIMELINE_CONFIG = "timelineConfig";
         protected const string POSITION = "position";
         protected const string DURATION = "duration";
         protected const string TWEEN_TYPE = "tweenType";

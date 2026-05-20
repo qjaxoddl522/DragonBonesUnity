@@ -52,6 +52,8 @@ namespace DragonBones
         protected float _duration;
         protected float _timeScale;
         protected float _timeOffset;
+        protected int _timeLoop; // 0: no loop, 1: loop
+        protected float _timelineDuration;
         protected DragonBonesData _dragonBonesData;
         protected AnimationData _animationData;
         protected TimelineData _timelineData;
@@ -82,6 +84,8 @@ namespace DragonBones
             this._duration = 0.0f;
             this._timeScale = 1.0f;
             this._timeOffset = 0.0f;
+            this._timeLoop = 0;
+            this._timelineDuration = 0.0f;
             this._dragonBonesData = null; //
             this._animationData = null; //
             this._timelineData = null; //
@@ -111,16 +115,12 @@ namespace DragonBones
                 this.currentPlayTimes = 1;
                 this.currentTime = this._actionTimeline.currentTime;
             }
-            else if (this._actionTimeline == null || this._timeScale != 1.0f || this._timeOffset != 0.0f)
+            else if (this._actionTimeline == null)
             {
+                // Action timeline 主时间轴，是事件时间轴，如果没有事件，就是空帧的时间轴。不可缩放，不可偏移，不可循环
+                // 每次更新会首先更新它，然后再更新其他时间轴
                 var playTimes = this._animationState.playTimes;
                 var totalTime = playTimes * this._duration;
-
-                passedTime *= this._timeScale;
-                if (this._timeOffset != 0.0f)
-                {
-                    passedTime += this._timeOffset * this._animationData.duration;
-                }
 
                 if (playTimes > 0 && (passedTime >= totalTime || passedTime <= -totalTime))
                 {
@@ -136,7 +136,7 @@ namespace DragonBones
                     }
                     else
                     {
-                        this.currentTime = this._duration + 0.000001f; // Precision problem
+                        this.currentTime = this.playState == 1 ? this._duration + 0.000001f : this._duration; // Precision problem
                     }
                 }
                 else
@@ -163,10 +163,46 @@ namespace DragonBones
             }
             else
             {
-                // Multi frames.
+                // Multi frames. 包含多帧的时间轴，可以缩放，可以偏移，可以循环
+                // 6.0版本的缩放和偏移是加在时间轴上的，每个时间轴的长度可以不一致
                 this.playState = this._actionTimeline.playState;
                 this.currentPlayTimes = this._actionTimeline.currentPlayTimes;
-                this.currentTime = this._actionTimeline.currentTime;
+                float mainTime = this._actionTimeline.currentTime;
+
+                if (this._timeScale == 1.0f && this._timeOffset == 0.0f && this._timeLoop == 0 && this._timelineDuration == this._duration)
+                {
+                    this.currentTime = mainTime;
+                }
+                else
+                {
+                    if (this._timeScale != 1.0f || this._timeOffset != 0.0f)
+                    {
+                        mainTime *= this._timeScale;
+                        mainTime += this._timeOffset;
+                    }
+
+                    if (this._timeLoop != 0)
+                    {
+                        mainTime = mainTime % this._timelineDuration;
+                        if (mainTime < 0)
+                        {
+                            mainTime += this._timelineDuration;
+                        }
+                    }
+                    else if (mainTime > this._timelineDuration)
+                    {
+                        // 如果时间轴不循环，那么当时间超过时间轴长度时，就会停在最后一帧
+                        mainTime = this._timelineDuration + 0.000001f;
+                    }
+                    else if (mainTime < 0)
+                    {
+                        mainTime = 0.0f;
+                    }
+
+                    this.currentTime = mainTime;
+                }
+
+                this.currentTime += this._position;
             }
 
             if (this.currentPlayTimes == prevPlayTimes && this.currentTime == prevTime)
@@ -181,6 +217,15 @@ namespace DragonBones
             }
 
             return true;
+        }
+
+        private int UInt2Int(int v)
+        {
+            if (v > 32767)
+            {
+                return v - 65536;
+            }
+            return v;
         }
 
         public virtual void Init(Armature armature, AnimationState animationState, TimelineData timelineData)
@@ -212,9 +257,10 @@ namespace DragonBones
 
                 this._frameCount = this._timelineArray[this._timelineData.offset + (int)BinaryOffset.TimelineKeyFrameCount];
                 this._frameValueOffset = this._timelineArray[this._timelineData.offset + (int)BinaryOffset.TimelineFrameValueOffset];
-                var timelineScale = this._timelineArray[this._timelineData.offset + (int)BinaryOffset.TimelineScale];
-                this._timeScale = 100.0f / (timelineScale == 0 ? 100.0f : timelineScale);
-                this._timeOffset = this._timelineArray[this._timelineData.offset + (int)BinaryOffset.TimelineOffset] * 0.01f;
+                this._timeScale = this._timelineArray[this._timelineData.offset + (int)BinaryOffset.TimelineScale] * 0.01f;
+                this._timeOffset = this.UInt2Int(this._timelineArray[this._timelineData.offset + (int)BinaryOffset.TimelineOffset]) * this._frameRateR;
+                this._timeLoop = this._timelineArray[this._timelineData.offset + (int)BinaryOffset.TimelineLoop];
+                this._timelineDuration = this._timelineArray[this._timelineData.offset + (int)BinaryOffset.TimelineDuration] * this._frameRateR;
             }
         }
 
