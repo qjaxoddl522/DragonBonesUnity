@@ -120,7 +120,7 @@ namespace DragonBones
         protected List<DisplayData> _rawDisplayDatas;
         /// <internal/>
         /// <private/>
-        protected DisplayData _displayData;
+        public DisplayData _displayData;
         /// <private/>
         protected BoundingBoxData _boundingBoxData;
         /// <private/>
@@ -249,6 +249,50 @@ namespace DragonBones
         /// <private/>
         protected abstract void _IdentityTransform();
 
+        public VerticesData _geometryData
+        {
+            get
+            {
+                DisplayData rawDisplayData = null;
+
+                if (this._displayIndex >= 0)
+                {
+                    if (this._rawDisplayDatas != null)
+                    {
+                        rawDisplayData = this._displayIndex < this._rawDisplayDatas.Count ? this._rawDisplayDatas[this._displayIndex] : null;
+                    }
+
+                    if (rawDisplayData == null)
+                    {
+                        rawDisplayData = this._GetDefaultRawDisplayData(this._displayIndex);
+                    }
+                }
+
+                if (this._displayData != null)
+                {
+                    if (this._displayData.type == DisplayType.Mesh)
+                    {
+                        return (this._displayData as MeshDisplayData).vertices;
+                    }
+                    else if (this._displayData.type == DisplayType.Path)
+                    {
+                        return (this._displayData as PathDisplayData).vertices;
+                    }
+                    else if (rawDisplayData != null)
+                    {
+                        if (rawDisplayData.type == DisplayType.Mesh)
+                        {
+                            return (rawDisplayData as MeshDisplayData).vertices;
+                        }
+                        else if (rawDisplayData.type == DisplayType.Path)
+                        {
+                            return (rawDisplayData as PathDisplayData).vertices;
+                        }
+                    }
+                }
+                return null;
+            }
+        }
         /// <summary>
         /// - Support default skin data.
         /// </summary>

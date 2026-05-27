@@ -36,9 +36,12 @@ namespace DragonBones
             Helper.OnError += OnDragonBonesError;
         }
 
+        private static string _lastError;
         private static void OnDragonBonesError(string message)
         {
-            EditorUtility.DisplayDialog("DragonBones Error", message, "OK");
+            if(_lastError == message) return;
+            EditorUtility.DisplayDialog("DragonBones Error", message, "OK2");
+            _lastError = message;
         }
 
         [MenuItem("GameObject/DragonBones/Armature Object", false, 10)]

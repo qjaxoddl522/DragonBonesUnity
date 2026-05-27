@@ -286,10 +286,42 @@ namespace DragonBones
             var constraints = dataPackage.armature.constraints;
             foreach (var constraintData in constraints.Values)
             {
-                // TODO more constraint type.
-                var constraint = BaseObject.BorrowObject<IKConstraint>();
-                constraint.Init(constraintData, armature);
-                armature._AddConstraint(constraint);
+                switch (constraintData.type)
+                {
+                    case ConstraintType.Transform:
+                        TransformConstraintData transformConstraintData = constraintData as TransformConstraintData;
+                        if (transformConstraintData.bones != null && transformConstraintData.bones.Count > 0)
+                        {
+                            int i = 0;
+                            int l = transformConstraintData.bones.Count;
+                            for (i = 0; i < l; ++i)
+                            {
+                                var bone = transformConstraintData.bones[i];
+                                if (bone != null)
+                                {
+                                    TransformConstraint transformConstraint = BaseObject.BorrowObject<TransformConstraint>();
+                                    transformConstraint.index = i;
+                                    transformConstraint.Init(constraintData, armature);
+                                }
+                            }
+                        }
+                        break;
+                    case ConstraintType.Path:
+                        var pathConstraint = BaseObject.BorrowObject<PathConstraint>();
+                        pathConstraint.Init(constraintData, armature);
+                        armature._AddConstraint(pathConstraint);
+                        break;
+                    case ConstraintType.Physics:
+                        var physicsConstraint = BaseObject.BorrowObject<PhysicsConstraint>();
+                        physicsConstraint.Init(constraintData, armature);
+                        break;
+                    case ConstraintType.IK:
+                    default:
+                        var constraint = BaseObject.BorrowObject<IKConstraint>();
+                        constraint.Init(constraintData, armature);
+                        armature._AddConstraint(constraint);
+                        break;
+                }
             }
         }
 

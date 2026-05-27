@@ -88,6 +88,11 @@ namespace DragonBones
         /// <internal/>
         /// <private/>
         internal List<int> _cachedFrameIndices = new List<int>();
+
+        internal TransformConstraint _transformConstraint;
+        internal List<TransformConstraint> _targetTransformConstraints = new List<TransformConstraint>();
+        internal PhysicsConstraint _physicsConstraint;
+
         /// <inheritDoc/>
         protected override void _OnClear()
         {
@@ -106,6 +111,13 @@ namespace DragonBones
             this._boneData = null; //
             this._parent = null;
             this._cachedFrameIndices = null;
+            this._transformConstraint = null;
+            this._targetTransformConstraints = null;
+            this._physicsConstraint = null;
+        }
+        public void ForceUpdateTransform()
+        {
+            this._UpdateGlobalTransformMatrix(true);
         }
         /// <private/>
         private void _UpdateGlobalTransformMatrix(bool isCache)
@@ -200,6 +212,7 @@ namespace DragonBones
                     if (isCache)
                     {
                         global.FromMatrix(globalTransformMatrix);
+                        this._globalDirty = false;
                     }
                     else
                     {
@@ -315,6 +328,29 @@ namespace DragonBones
 
                 global.ToMatrix(globalTransformMatrix);
             }
+            
+            
+            if (this._transformConstraint != null)
+            {
+                this._transformConstraint._dirty = true;
+            }
+            if (this._targetTransformConstraints != null && this._targetTransformConstraints.Count > 0) {
+                foreach (var constraint in this._targetTransformConstraints) {
+                    constraint._dirty = true;
+                }
+            }
+            if (this._physicsConstraint != null)
+            {
+                this._physicsConstraint._sleeping = false;
+            }
+        }
+        internal void AddTargetTransformConstraint(TransformConstraint constraint ) {
+            if (this._targetTransformConstraints == null) {
+                this._targetTransformConstraints = new List<TransformConstraint>();
+            }
+            if (!this._targetTransformConstraints.Contains(constraint)) {
+                this._targetTransformConstraints.Add(constraint);
+            }
         }
         /// <internal/>
         /// <private/>
@@ -341,6 +377,15 @@ namespace DragonBones
         /// <private/>
         internal void Update(int cacheFrameIndex)
         {
+
+
+            if (this._transformConstraint != null && this._transformConstraint._dirty)
+            {
+                this._transformDirty = true;
+            }
+            if (this._physicsConstraint != null && !this._physicsConstraint._sleeping) {
+                this._transformDirty = true;
+            }
             this._blendState.dirty = false;
 
             if (cacheFrameIndex >= 0 && this._cachedFrameIndices != null)
@@ -394,18 +439,6 @@ namespace DragonBones
             }
             else
             {
-                if (this._hasConstraint)
-                {
-                    // Update constraints.
-                    foreach (var constraint in this._armature._constraints)
-                    {
-                        if (constraint._root == this)
-                        {
-                            constraint.Update();
-                        }
-                    }
-                }
-
                 if (this._transformDirty || (this._parent != null && this._parent._childrenTransformDirty))
                 {
                     // Dirty.
@@ -443,7 +476,29 @@ namespace DragonBones
                 this._childrenTransformDirty = false;
             }
 
-            this._localDirty = true;
+            if (this._transformConstraint != null)
+            {
+                this._transformConstraint.Update();
+                // 防止ik约束再计算一遍globalTransformMatrix
+                this._localDirty = false;
+            }
+            // FIXME: 临时把ik的处理放这里，后面需要总和考虑
+            if (this._hasConstraint)
+            {
+                // Update constraints.
+                foreach (var constraint in this._armature._constraints)
+                {
+                    if (constraint._root == this)
+                    {
+                        constraint.Update();
+                    }
+                }
+            }
+            if (this._physicsConstraint != null && !this._physicsConstraint._sleeping)
+            {
+                this._physicsConstraint.Update();
+            }
+            this._localDirty = true;           
         }
         /// <internal/>
         /// <private/>
@@ -456,6 +511,10 @@ namespace DragonBones
                 if (this._transformDirty || (this._parent != null && this._parent._childrenTransformDirty))
                 {
                     this._UpdateGlobalTransformMatrix(true);
+                }
+                else if (this._globalDirty)
+                {
+                    this.global.FromMatrix(this.globalTransformMatrix);
                 }
 
                 this._transformDirty = true;

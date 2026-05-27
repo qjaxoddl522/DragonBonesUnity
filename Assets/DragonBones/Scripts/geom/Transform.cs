@@ -195,7 +195,7 @@ namespace DragonBones
         }
 
         /// <private/>
-        public Transform FromMatrix(Matrix matrix)
+        public Transform FromMatrix(Matrix matrix, bool normalizeRadian = false)
         {
             var backupScaleX = this.scaleX;
             var backupScaleY = this.scaleY;
@@ -233,6 +233,10 @@ namespace DragonBones
 
             this.skew = skewX - this.rotation;
 
+            if(normalizeRadian) {
+                this.rotation = NormalizeRadian(this.rotation);
+                this.skew = NormalizeRadian(this.skew);
+            }
             return this;
         }
 

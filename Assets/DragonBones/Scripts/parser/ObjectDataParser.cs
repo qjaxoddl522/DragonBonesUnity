@@ -151,6 +151,44 @@ namespace DragonBones
 
             return defaultValue;
         }
+        protected static List<string> _GetStringList(Dictionary<string, object> rawData, string key, List<string> defaultValue)
+        {
+            if (rawData.ContainsKey(key))
+            {
+                var value = rawData[key];
+                var res = (value as List<object>).ConvertAll<string>(Convert.ToString);//string
+                if (res != null)
+                {
+
+                    return res;
+
+                }
+                else
+                {
+                    return new List<string>();
+                }
+            }
+
+            return defaultValue;
+        }
+        protected static List<float> _GetFloatList(Dictionary<string, object> rawData, string key, List<float> defaultValue)
+        {
+            if (rawData.ContainsKey(key))
+            {
+                var value = rawData[key];
+                var res = (value as List<object>).ConvertAll<float>(Convert.ToSingle);//float
+                if (res != null)
+                {
+                    return res;
+                }
+                else
+                {
+                    return new List<float>();
+                }
+            }
+
+            return defaultValue;
+        }
 
         protected int _rawTextureAtlasIndex = 0;
         protected readonly List<BoneData> _rawBones = new List<BoneData>();
@@ -483,10 +521,10 @@ namespace DragonBones
             // 处理 TransformConstraint (6.0新增)
             if (rawData.ContainsKey(ObjectDataParser.TRANSFORM_CONSTRAINT))
             {
-                var rawTransformConstraints = rawData[ObjectDataParser.TRANSFORM_CONSTRAINT] as List<object>;
-                foreach (Dictionary<string, object> rawTransCon in rawTransformConstraints)
+                var rawConstraints = rawData[ObjectDataParser.TRANSFORM_CONSTRAINT] as List<object>;
+                foreach (Dictionary<string, object> rawConstraint in rawConstraints)
                 {
-                    var constraint = this._ParseTransformConstraint(rawTransCon);
+                    var constraint = this._ParseTransformConstraint(rawConstraint, scale);
                     if (constraint != null)
                     {
                         armature.AddConstraint(constraint);
@@ -494,27 +532,12 @@ namespace DragonBones
                 }
             }
 
-            // 处理 PhysicsConstraint (6.0新增)
             if (rawData.ContainsKey(ObjectDataParser.PHYSICS))
             {
-                var rawPhysicsConstraints = rawData[ObjectDataParser.PHYSICS] as List<object>;
-                foreach (Dictionary<string, object> rawPhysicsCon in rawPhysicsConstraints)
+                var rawConstraints = rawData[ObjectDataParser.PHYSICS] as List<object>;
+                foreach (Dictionary<string, object> rawConstraint in rawConstraints)
                 {
-                    var constraint = this._ParsePhysicsConstraint(rawPhysicsCon);
-                    if (constraint != null)
-                    {
-                        armature.AddConstraint(constraint);
-                    }
-                }
-            }
-
-            // 处理 PathConstraint (6.0新增)
-            if (rawData.ContainsKey(ObjectDataParser.PATH_CONSTRAINT))
-            {
-                var rawPathConstraints = rawData[ObjectDataParser.PATH_CONSTRAINT] as List<object>;
-                foreach (Dictionary<string, object> rawPathCon in rawPathConstraints)
-                {
-                    var constraint = this._ParsePathConstraint(rawPathCon);
+                    var constraint = this._ParsePhysics(rawConstraint, scale);
                     if (constraint != null)
                     {
                         armature.AddConstraint(constraint);
@@ -543,6 +566,19 @@ namespace DragonBones
                 }
             }
 
+            if (rawData.ContainsKey(ObjectDataParser.PATH_CONSTRAINT))
+            {
+                var rawConstraints = rawData[ObjectDataParser.PATH_CONSTRAINT] as List<object>;
+                foreach (Dictionary<string, object> rawConstraint in rawConstraints)
+                {
+                    var constraint = this._ParsePathConstraint(rawConstraint, scale);
+                    if (constraint != null)
+                    {
+                        armature.AddConstraint(constraint);
+                    }
+                }
+            }
+
             for (int i = 0, l = this._cacheRawMeshes.Count; i < l; i++)
             {
                 var shareName = ObjectDataParser._GetString(rawData, DataParser.SHARE, "");
@@ -556,7 +592,7 @@ namespace DragonBones
                 { // 
                     skinName = DataParser.DEFAULT_NAME;
                 }
-                
+
                 var shareMesh = armature.GetMesh(skinName, "", shareName) as MeshDisplayData; // TODO slot;
                 if (shareMesh == null)
                 {
@@ -675,27 +711,159 @@ namespace DragonBones
             return constraint;
         }
 
-        protected ConstraintData _ParseTransformConstraint(Dictionary<string, object> rawData)
+        protected ConstraintData _ParseTransformConstraint(Dictionary<string, object> rawData, float scale = 1.0f)
         {
-            // TODO: 完整实现 TransformConstraint 解析
-            // 当前空实现保证加载6.0数据不报错
-            return null;
+            var target = this._armature.GetBone(ObjectDataParser._GetString(rawData, ObjectDataParser.TARGET, ""));
+            if (target == null)
+            {
+                return null;
+            }
+
+            var boneNames = ObjectDataParser._GetStringList(rawData, ObjectDataParser.BONES, null);
+            if (boneNames == null || boneNames.Count == 0) {
+                return null;
+            }
+
+            var bones = new List<BoneData>();
+            foreach (string boneName in boneNames)
+            {
+                var bone = this._armature.GetBone(boneName);
+                if (bone != null)
+                {
+                    bones.Add(bone);
+                }
+            }
+            if (bones.Count == 0) {
+                return null;
+            }
+            var constraint = BaseObject.BorrowObject<TransformConstraintData>();
+            constraint.type = ConstraintType.Transform;
+            constraint.target = target;
+            constraint.bones = bones;
+            constraint.name = ObjectDataParser._GetString(rawData, ObjectDataParser.NAME, "");
+
+            if (rawData.ContainsKey(DataParser.OFFSET))
+            {
+                var rawOffsetTransform = rawData[DataParser.OFFSET] as Dictionary<string, object>;
+
+                constraint.offsetX = ObjectDataParser._GetNumber(rawOffsetTransform, DataParser.X, 0.0f) * scale;
+                constraint.offsetY = ObjectDataParser._GetNumber(rawOffsetTransform, DataParser.Y, 0.0f) * scale;
+                constraint.offsetRotation = Transform.NormalizeRadian(ObjectDataParser._GetNumber(rawOffsetTransform, DataParser.SKEW_X, 0.0f) * Transform.DEG_RAD);
+                constraint.offsetScaleX = ObjectDataParser._GetNumber(rawOffsetTransform, DataParser.SCALE_X, 0.0f);
+                constraint.offsetScaleY = ObjectDataParser._GetNumber(rawOffsetTransform, DataParser.SCALE_Y, 0.0f);
+            }
+            else
+            {
+                constraint.offsetX = 0.0f;
+                constraint.offsetY = 0.0f;
+                constraint.offsetRotation = 0.0f;
+                constraint.offsetScaleX = 0.0f;
+                constraint.offsetScaleY = 0.0f;
+            }
+            
+            constraint.rotateWeight = ObjectDataParser._GetNumber(rawData, DataParser.ROTATE_WEIGHT, 0.0f);
+            constraint.scaleWeight = ObjectDataParser._GetNumber(rawData, DataParser.SCALE_WEIGHT, 0.0f);
+            constraint.translateWeight = ObjectDataParser._GetNumber(rawData, DataParser.TRANSLATE_WEIGHT, 0.0f);
+            constraint.local = ObjectDataParser._GetBoolean(rawData, DataParser.LOCAL, false);
+            constraint.relative = ObjectDataParser._GetBoolean(rawData, DataParser.RELATIVE, false);
+
+            return constraint;
         }
 
-        protected ConstraintData _ParsePhysicsConstraint(Dictionary<string, object> rawData)
+        protected ConstraintData _ParsePhysics(Dictionary<string, object> rawData, float scale = 1.0f)
         {
-            // TODO: 完整实现 PhysicsConstraint 解析
-            // 当前空实现保证加载6.0数据不报错
-            return null;
+
+            var boneName = ObjectDataParser._GetString(rawData, ObjectDataParser.BONE, "");
+            if (boneName == null)
+            {
+                return null;
+            }
+
+            var bone = this._armature.GetBone(ObjectDataParser._GetString(rawData, ObjectDataParser.BONE, ""));
+            if (bone == null)
+            {
+                return null;
+            }
+
+            var constraint = BaseObject.BorrowObject<PhysicsConstraintData>();
+            constraint.type = ConstraintType.Physics;
+            constraint.target = bone;
+            constraint.bone = bone;
+            constraint.name = ObjectDataParser._GetString(rawData, DataParser.NAME, "");
+            constraint.x = ObjectDataParser._GetNumber(rawData, DataParser.X, 0.0f);
+            constraint.y = ObjectDataParser._GetNumber(rawData, DataParser.Y, 0.0f);
+            constraint.rotate = ObjectDataParser._GetNumber(rawData, DataParser.ROTATE, 0.0f);
+            constraint.scaleX = ObjectDataParser._GetNumber(rawData, DataParser.SCALE_X, 0.0f);
+            constraint.shearX = ObjectDataParser._GetNumber(rawData, DataParser.SHEAR_X, 0.0f);
+            constraint.limit = ObjectDataParser._GetNumber(rawData, DataParser.LIMIT, 0);
+            constraint.fps = (uint)ObjectDataParser._GetNumber(rawData, DataParser.FPS, 1);
+            constraint.inertia = ObjectDataParser._GetNumber(rawData, DataParser.INERTIA, 0.0f);
+            constraint.strength = ObjectDataParser._GetNumber(rawData, DataParser.STRENGTH, 0.0f); 
+            constraint.damping = ObjectDataParser._GetNumber(rawData, DataParser.DAMPING, 0.0f);
+            constraint.mass = ObjectDataParser._GetNumber(rawData, DataParser.MASS, 0.0f);
+            constraint.wind = ObjectDataParser._GetNumber(rawData, DataParser.WIND, 0.0f);
+            constraint.windDisturbance = ObjectDataParser._GetNumber(rawData, DataParser.WIND_DISTURBANCE, 0.0f);
+            constraint.gravity = ObjectDataParser._GetNumber(rawData, DataParser.GRAVITY, 0.0f);
+            constraint.weight = ObjectDataParser._GetNumber(rawData, DataParser.WEIGHT, 0.0f);
+
+            return constraint;
         }
 
-        protected ConstraintData _ParsePathConstraint(Dictionary<string, object> rawData)
+        protected ConstraintData _ParsePathConstraint(Dictionary<string, object> rawData, float scale = 1.0f)
         {
-            // TODO: 完整实现 PathConstraint 解析
-            // 当前空实现保证加载6.0数据不报错
-            return null;
-        }
+            var target = this._armature.GetSlot(ObjectDataParser._GetString(rawData, DataParser.TARGET, ""));
+            if (target == null) {
+                return null;
+            }
 
+            var defaultSkin = this._armature.defaultSkin;
+            if (defaultSkin == null) {
+                return null;
+            }
+            //TODO
+            var targetDisplay = defaultSkin.GetDisplay(target.name, ObjectDataParser._GetString(rawData, DataParser.TARGET_DISPLAY, target.name));
+            if (targetDisplay == null || !(targetDisplay is PathDisplayData))
+            {
+                return null;
+            }
+
+            var bones = ObjectDataParser._GetStringList(rawData, ObjectDataParser.BONES, null);
+            if (bones == null || bones.Count == 0) {
+                return null;
+            }
+
+            var constraint = BaseObject.BorrowObject<PathConstraintData>();
+            constraint.name = ObjectDataParser._GetString(rawData, DataParser.NAME, "");
+            constraint.type = ConstraintType.Path;
+            constraint.pathSlot = target;
+            constraint.pathDisplayData = targetDisplay as PathDisplayData;
+            constraint.target = target.parent;
+            constraint.positionMode = DataParser._GetPositionMode(ObjectDataParser._GetNumber(rawData, DataParser.POSITION_MODE, 0)); //PositionMode.Fixed
+            constraint.spacingMode = DataParser._GetSpacingMode(ObjectDataParser._GetNumber(rawData, DataParser.SPACING_MODE, 1)); //SpacingMode.Fixed
+            constraint.rotateMode = DataParser._GetRotateMode(ObjectDataParser._GetNumber(rawData, DataParser.ROTATE_MODE, 0)); //RotateMode.Tangent
+            constraint.position = ObjectDataParser._GetNumber(rawData, DataParser.POSITION, 0);
+            constraint.spacing = ObjectDataParser._GetNumber(rawData, DataParser.SPACING, 0);
+            constraint.rotateOffset = ObjectDataParser._GetNumber(rawData, DataParser.ROTATE_OFFSET, 0);
+            constraint.rotateWeight = ObjectDataParser._GetNumber(rawData, DataParser.ROTATE_WEIGHT, 1);
+            constraint.xWeight = ObjectDataParser._GetNumber(rawData, DataParser.X_WEIGHT, 1);
+            constraint.yWeight = ObjectDataParser._GetNumber(rawData, DataParser.Y_WEIGHT, 1);
+            //
+            foreach (string boneName in bones)
+            {
+                var bone = this._armature.GetBone(boneName);
+                if (bone != null)
+                {
+                    constraint.AddBone(bone);
+
+                    if (constraint.root == null)
+                    {
+                        constraint.root = bone;
+                    }
+                }
+            }
+
+            return constraint;
+        }
         private SlotData _ParseSlot(Dictionary<string, object> rawData, int zOrder)
         {
             var slot = BaseObject.BorrowObject<SlotData>();
@@ -853,6 +1021,34 @@ namespace DragonBones
                         boundingBoxDisplay.path = path.Length > 0 ? path : name;
                         boundingBoxDisplay.boundingBox = boundingBox;
                     }
+                    break;
+                case DisplayType.Path:
+                    var rawCurveLengths = ObjectDataParser._GetFloatList(rawData, DataParser.LENGTHS, new List<float>());
+                    var pathDisplay = BaseObject.BorrowObject<PathDisplayData>();
+                    display = pathDisplay;
+                    pathDisplay.closed = ObjectDataParser._GetBoolean(rawData, DataParser.CLOSED, false);
+                    pathDisplay.constantSpeed = ObjectDataParser._GetBoolean(rawData, DataParser.CONSTANT_SPEED, false);
+                    pathDisplay.name = name;
+                    pathDisplay.path = path.Length > 0 ? path : name;
+                    pathDisplay.vertices.data = this._data;
+                    if (pathDisplay.curveLengths == null)
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        pathDisplay.curveLengths.Clear();
+                    }
+
+                    var i = 0;
+                    var l = rawCurveLengths.Count;
+                    pathDisplay.curveLengths.ResizeList(l);
+                    for (i = 0; i < l; ++i)
+                    {
+                        pathDisplay.curveLengths[i] = rawCurveLengths[i];
+                    }
+
+                    this._ParsePath(rawData, pathDisplay);
                     break;
             }
 
@@ -1072,6 +1268,134 @@ namespace DragonBones
             return polygonBoundingBox;
 
         }
+
+
+        protected void _ParseGeometry( Dictionary<string, object> rawData, Dictionary<string, object>riggingData, VerticesData geometry)
+        {
+            int vertexCount = 0;
+            int vertexOffset = 0;
+            if (rawData != null && rawData.ContainsKey(ObjectDataParser.VERTICES))
+            {
+                var rawVertices = (rawData[ObjectDataParser.VERTICES] as List<object>).ConvertAll<float>(Convert.ToSingle);//float
+                vertexCount = (rawVertices.Count / 2); // uint
+                
+                vertexOffset = this._floatArray.Count;
+
+                var geometryOffset = this._intArray.Count;
+                geometry.offset = geometryOffset;
+
+                this._intArray.ResizeList(this._intArray.Count + 1 + 1 + 1 + 1, (short)0);
+                this._intArray[geometryOffset + (int)BinaryOffset.GeometryVertexCount] = (short)vertexCount;
+                this._intArray[geometryOffset + (int)BinaryOffset.GeometryFloatOffset] = (short)vertexOffset;
+                this._intArray[geometryOffset + (int)BinaryOffset.GeometryTriangleCount] = (short)0;
+                this._intArray[geometryOffset + (int)BinaryOffset.GeometryWeightOffset] = -1;
+
+
+                this._floatArray.ResizeList(this._floatArray.Count + vertexCount * 2, 0.0f);
+
+                for (int iv = 0, l = vertexCount * 2; iv < l; ++iv)
+                {
+                    this._floatArray[vertexOffset + iv] = rawVertices[iv];
+                }
+
+                if (rawData.ContainsKey(ObjectDataParser.UVS))
+                {
+                    var rawUVs = (rawData[ObjectDataParser.UVS] as List<object>).ConvertAll<float>(Convert.ToSingle);//float
+                    var uvOffset = vertexOffset + vertexCount * 2;
+                    this._floatArray.ResizeList(this._floatArray.Count + vertexCount * 2, 0.0f);
+                    for (int iuv = 0, l = vertexCount * 2; iuv < l; ++iuv)
+                    {
+                        this._floatArray[uvOffset + iuv] = rawUVs[iuv];
+                    }
+                }
+
+                if (rawData.ContainsKey(ObjectDataParser.TRIANGLES))
+                {
+                    var rawTriangles = (rawData[ObjectDataParser.TRIANGLES] as List<object>).ConvertAll<short>(Convert.ToInt16);//uint
+                    var triangleCount = (rawTriangles.Count / 3); // uint
+
+                    this._intArray.ResizeList(this._intArray.Count + triangleCount * 3, (short)0);
+                    for (int it = 0, l = triangleCount * 3; it < l; ++it)
+                    {
+                        this._intArray[geometryOffset + (int)BinaryOffset.GeometryVertexIndices + it] = rawTriangles[it];
+                    }
+                    this._intArray[geometryOffset + (int)BinaryOffset.GeometryTriangleCount] = (short)triangleCount;
+                }  
+            }
+            if (riggingData != null && riggingData.ContainsKey(ObjectDataParser.WEIGHTS))
+            {
+                var rawWeights = (riggingData[ObjectDataParser.WEIGHTS] as List<object>).ConvertAll<float>(Convert.ToSingle); // float;
+                var rawSlotPose = (riggingData[ObjectDataParser.SLOT_POSE] as List<object>).ConvertAll<float>(Convert.ToSingle); // float;
+                var rawBonePoses = (riggingData[ObjectDataParser.BONE_POSE] as List<object>).ConvertAll<float>(Convert.ToSingle); //float ;
+                //var sortedBones = this._armature.sortedBones;
+                var weightBoneIndices = new List<uint>();
+                var weightBoneCount = rawBonePoses.Count / 7; // uint
+                var floatOffset = this._floatArray.Count;
+                var weightCount = (int)Math.Floor((double)rawWeights.Count - (double)vertexCount) / 2; // uint
+                var weightOffset = this._intArray.Count;
+                var weight = BaseObject.BorrowObject<WeightData>();
+
+                weight.count = weightCount;
+                weight.offset = weightOffset;
+
+                weightBoneIndices.ResizeList(weightBoneCount, uint.MinValue);
+                this._intArray.ResizeList(this._intArray.Count + 1 + 1 + weightBoneCount + vertexCount + weight.count, (short)0);
+                this._intArray[weightOffset + (int)BinaryOffset.WeigthFloatOffset] = (short)floatOffset;
+
+                for (var i = 0; i < weightBoneCount; ++i)
+                {
+                    var rawBoneIndex = (int)rawBonePoses[i * 7]; // uint
+                    var bone = this._rawBones[(int)rawBoneIndex];
+                    weight.AddBone(bone);
+                    weightBoneIndices[i] = (uint)rawBoneIndex;
+
+                    this._intArray[weightOffset + (int)BinaryOffset.WeigthBoneIndices + i] = (short)this._armature.sortedBones.IndexOf(bone);
+                }
+
+                this._floatArray.ResizeList(this._floatArray.Count + (weightCount * 3), 0.0f);
+                this._helpMatrixA.CopyFromArray(rawSlotPose, 0);
+                for (int i = 0, iW = 0, iB = weightOffset + (int)BinaryOffset.WeigthBoneIndices + weightBoneCount, iV = floatOffset; i < vertexCount; ++i)
+                {
+                    var iD = i * 2;
+                    var vertexBoneCount = this._intArray[iB++] = short.Parse(rawWeights[iW++].ToString()); // uint
+
+                    var x = this._floatArray[vertexOffset + iD];
+                    var y = this._floatArray[vertexOffset + iD + 1];
+                    this._helpMatrixA.TransformPoint(x, y, this._helpPoint);
+                    x = this._helpPoint.x;
+                    y = this._helpPoint.y;
+
+                    for (var j = 0; j < vertexBoneCount; ++j)
+                    {
+                        var rawBoneIndex = (uint)rawWeights[iW++]; // uint
+                        var boneIndex = weightBoneIndices.IndexOf(rawBoneIndex);
+                        this._helpMatrixB.CopyFromArray(rawBonePoses, weightBoneIndices.IndexOf(rawBoneIndex) * 7 + 1);
+                        this._helpMatrixB.Invert();
+                        this._helpMatrixB.TransformPoint(x, y, this._helpPoint);
+                        this._intArray[iB++] = (short)boneIndex;
+                        this._floatArray[iV++] = rawWeights[iW++];
+                        this._floatArray[iV++] = this._helpPoint.x;
+                        this._floatArray[iV++] = this._helpPoint.y;
+                    }
+                }
+
+                geometry.weight = weight;
+            }
+        }
+        protected void _ParsePath(Dictionary<string, object> rawData, PathDisplayData display)
+        {
+            this._ParseGeometry(rawData, rawData, display.vertices);
+
+            if (rawData.ContainsKey(ObjectDataParser.WEIGHTS))
+            {
+                var rawSlotPose = (rawData[ObjectDataParser.SLOT_POSE] as List<object>).ConvertAll<float>(Convert.ToSingle); // float;
+                var rawBonePoses = (rawData[ObjectDataParser.BONE_POSE] as List<object>).ConvertAll<float>(Convert.ToSingle); //float ;
+
+                var pathName = this._skin.name + "_" + this._slot.name + "_" + display.name; // Cache pose data.
+                this._weightSlotPose[pathName] = rawSlotPose;
+                this._weightBonePoses[pathName] = rawBonePoses;
+            }
+        }
         protected virtual AnimationData _ParseAnimation(Dictionary<string, object> rawData)
         {
             var animation = BaseObject.BorrowObject<AnimationData>();
@@ -1149,7 +1473,6 @@ namespace DragonBones
                     {
                         skinName = ObjectDataParser.DEFAULT_NAME;
                     }
-                    
                     this._slot = this._armature.GetSlot(slotName);
                     this._mesh = this._armature.GetMesh(skinName, slotName, displayName) as MeshDisplayData;
                     if (this._slot == null || this._mesh == null)
@@ -1261,21 +1584,22 @@ namespace DragonBones
 
             return animation;
         }
-        protected int _GetTimelineDuration(List<object> rawFrames)
-        {
-            if (rawFrames == null || rawFrames.Count == 0)
-            {
+        protected ushort getTimelineDuration(List<object> frames) {
+            if (frames == null || frames.Count == 0) {
                 return 0;
             }
-
-            int duration = 0;
-            foreach (Dictionary<string, object> rawFrame in rawFrames)
-            {
-                duration += ObjectDataParser._GetNumber(rawFrame, ObjectDataParser.DURATION, 1);
+            else {
+                int duration = 0;
+                foreach (var frameObj in frames)
+                {
+                    var rawFrame = frameObj as Dictionary<string, object>;
+                    if (rawFrame == null) continue;
+                    var duration1 = ObjectDataParser._GetNumber(rawFrame, ObjectDataParser.DURATION, 1);
+                    duration += duration1;
+                }
+                return (ushort)duration;
             }
-            return duration;
         }
-
         protected TimelineData _ParseTimeline(
                                                 Dictionary<string, object> rawData, List<object> rawFrames, string framesKey, TimelineType type,
                                                 bool addIntOffset, bool addFloatOffset, uint frameValueCount,
@@ -1302,27 +1626,22 @@ namespace DragonBones
             var timeline = BaseObject.BorrowObject<TimelineData>();
             var timelineOffset = this._timelineArray.Count;
 
-            // 6.0: TimelineScale, TimelineOffset, TimelineLoop, TimelineDuration,
-            // TimelineKeyFrameCount, TimelineFrameValueCount, TimelineFrameValueOffset, TimelineFrameOffset + keyFrameCount
+            // 6.0版本的数据两个两个，一个是loop 一个是duration
             this._timelineArray.ResizeList(this._timelineArray.Count + 1 + 1 + 1 + 1 + 1 + 1 + 1 + keyFrameCount, (ushort)0);
-
-            bool hasTimelineConfig = false;
-            Dictionary<string, object> rawTimelineConfig = null;
-            if (rawData != null && rawData.ContainsKey(ObjectDataParser.TIMELINE_CONFIG))
+            if (rawData != null && rawData.ContainsKey(ObjectDataParser.TIMELINE_CONFIG) && rawData[ObjectDataParser.TIMELINE_CONFIG] != null)
             {
-                var rawConfig = rawData[ObjectDataParser.TIMELINE_CONFIG] as Dictionary<string, object>;
-                if (rawConfig != null && framesKey.Length > 0 && rawConfig.ContainsKey(framesKey))
+                var rawTimelineConfig1 = rawData[ObjectDataParser.TIMELINE_CONFIG] as Dictionary<string, object>;
+                if (rawTimelineConfig1 != null && rawTimelineConfig1.ContainsKey(framesKey))
                 {
-                    rawTimelineConfig = rawConfig[framesKey] as Dictionary<string, object>;
-                    hasTimelineConfig = true;
+                    var rawTimelineConfig = rawTimelineConfig1[framesKey] as Dictionary<string, object>;
+                    if (rawTimelineConfig != null)
+                    {
+                        this._timelineArray[timelineOffset + (int)BinaryOffset.TimelineScale] = (ushort)Math.Round(ObjectDataParser._GetNumber(rawTimelineConfig, ObjectDataParser.SCALE, 1.0f) * 100);
+                        this._timelineArray[timelineOffset + (int)BinaryOffset.TimelineOffset] = (ushort)Math.Round(ObjectDataParser._GetNumber(rawTimelineConfig, ObjectDataParser.OFFSET, 0.0f));
+                        this._timelineArray[timelineOffset + (int)BinaryOffset.TimelineLoop] = (ushort)(ObjectDataParser._GetBoolean(rawTimelineConfig, ObjectDataParser.LOOP, false) ? 1 : 0);
+                    }
                 }
-            }
-
-            if (hasTimelineConfig && rawTimelineConfig != null)
-            {
-                this._timelineArray[timelineOffset + (int)BinaryOffset.TimelineScale] = (ushort)Math.Round(ObjectDataParser._GetNumber(rawTimelineConfig, ObjectDataParser.SCALE, 1.0f) * 100);
-                this._timelineArray[timelineOffset + (int)BinaryOffset.TimelineOffset] = (ushort)Math.Round(ObjectDataParser._GetNumber(rawTimelineConfig, ObjectDataParser.OFFSET, 0.0f));
-                this._timelineArray[timelineOffset + (int)BinaryOffset.TimelineLoop] = (ushort)(ObjectDataParser._GetBoolean(rawTimelineConfig, ObjectDataParser.LOOP, false) ? 1 : 0);
+                
             }
             else
             {
@@ -1330,9 +1649,8 @@ namespace DragonBones
                 this._timelineArray[timelineOffset + (int)BinaryOffset.TimelineOffset] = 0;
                 this._timelineArray[timelineOffset + (int)BinaryOffset.TimelineLoop] = 0;
             }
-
-            var timelineDuration = this._GetTimelineDuration(rawFrames);
-            this._timelineArray[timelineOffset + (int)BinaryOffset.TimelineDuration] = (ushort)timelineDuration;
+            var timelineDuration = this.getTimelineDuration(rawFrames);
+            this._timelineArray[timelineOffset + (int)BinaryOffset.TimelineDuration] = timelineDuration;
             this._timelineArray[timelineOffset + (int)BinaryOffset.TimelineKeyFrameCount] = (ushort)keyFrameCount;
             this._timelineArray[timelineOffset + (int)BinaryOffset.TimelineFrameValueCount] = (ushort)frameValueCount;
 

@@ -34,6 +34,12 @@ namespace DragonBones
         WeigthFloatOffset = 1,
         WeigthBoneIndices = 2,
 
+        GeometryVertexCount = 0,
+        GeometryTriangleCount = 1,
+        GeometryFloatOffset = 2,
+        GeometryWeightOffset = 3,
+        GeometryVertexIndices = 4,
+
         MeshVertexCount = 0,
         MeshTriangleCount = 1,
         MeshFloatOffset = 2,
@@ -42,8 +48,8 @@ namespace DragonBones
 
         TimelineScale = 0,
         TimelineOffset = 1,
-        TimelineLoop = 2,
-        TimelineDuration = 3,
+        TimelineLoop = 2, // 6.0 新增
+        TimelineDuration = 3, // 6.0 新增
         TimelineKeyFrameCount = 4,
         TimelineFrameValueCount = 5,
         TimelineFrameValueOffset = 6,
@@ -78,7 +84,8 @@ namespace DragonBones
         Armature = 1,
         Mesh = 2,
         BoundingBox = 3,
-        Path = 4
+        Path = 4,
+        Shape = 5
     }
     /// <summary>
     /// - Bounding box type.
@@ -251,6 +258,37 @@ namespace DragonBones
         Single = 5
     }
 
+    public enum ConstraintType
+    {
+        IK,
+        Path,
+        Transform,
+        Physics
+    }
+    /**
+     * @private
+     */
+    public enum PositionMode {
+        Fixed,
+        Percent
+    }
+    /**
+     * @private
+     */
+    public enum SpacingMode {
+        Length,
+        Fixed,
+        Percent
+    }
+    /**
+     * @private
+     */
+    public enum RotateMode {
+        Tangent,
+        Chain,
+        ChainScale,
+        Snip
+    }
     public static class Helper
     {
         public static readonly int INT16_SIZE = 2;
@@ -315,7 +353,7 @@ namespace DragonBones
         public static bool yDown = true;
         public static bool debug = false;
         public static bool debugDraw = false;
-        public static readonly string VERSION = "5.6.301";
+        public static readonly string VERSION = "6.0.2";
 
         private readonly WorldClock _clock = new WorldClock();
         private readonly List<EventObject> _events = new List<EventObject>();

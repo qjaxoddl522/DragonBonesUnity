@@ -92,6 +92,19 @@ namespace DragonBones
         protected const string STRINGS = "strings";
         protected const string CANVAS = "canvas";
 
+        protected const string BONES = "bones";
+        protected const string POSITION_MODE = "positionMode";
+        protected const string SPACING_MODE = "spacingMode";
+        protected const string ROTATE_MODE = "rotateMode";
+        protected const string SPACING = "spacing";
+        protected const string ROTATE_OFFSET = "rotateOffset";
+        protected const string ROTATE_WEIGHT = "rotateWeight";
+        protected const string SCALE_WEIGHT = "scaleWeight";
+        protected const string TRANSLATE_WEIGHT = "translateWeight";
+        protected const string X_WEIGHT = "xWeight";
+        protected const string Y_WEIGHT = "yWeight";
+        protected const string LOCAL = "local";
+        protected const string RELATIVE = "relative";
         protected const string TRANSFORM = "transform";
         protected const string PIVOT = "pivot";
         protected const string AABB = "aabb";
@@ -145,6 +158,8 @@ namespace DragonBones
         protected const string SKEW_Y = "skY";
         protected const string SCALE_X = "scX";
         protected const string SCALE_Y = "scY";
+        protected const string SHEAR_X = "shearX";
+        
         protected const string VALUE = "value";
         protected const string ROTATE = "rotate";
         protected const string SKEW = "skew";
@@ -168,7 +183,23 @@ namespace DragonBones
         protected const string GOTO_AND_PLAY = "gotoAndPlay";
 
         protected const string DEFAULT_NAME = "default";
+        
+        protected const string TARGET_DISPLAY = "targetDisplay";
+        protected const string CLOSED = "closed";
+        protected const string CONSTANT_SPEED = "constantSpeed";
+        protected const string VERTEX_COUNT = "vertexCount";
+        protected const string LENGTHS = "lengths";
 
+        // physics
+        protected const string LIMIT = "limit";
+        protected const string  FPS = "fps";
+        protected const string  INERTIA = "inertia";
+        protected const string  STRENGTH = "strength";
+        protected const string  DAMPING = "damping";
+        protected const string  MASS = "mass";
+        protected const string  WIND = "wind";
+        protected const string  WIND_DISTURBANCE = "windDisturbance";
+        protected const string  GRAVITY = "gravity";
         protected static ArmatureType _GetArmatureType(string value)
         {
             switch (value.ToLower())
@@ -202,7 +233,10 @@ namespace DragonBones
 
                 case "boundingbox":
                     return DisplayType.BoundingBox;
-
+                case "path":
+                    return DisplayType.Path;
+                case "shape":
+                    return DisplayType.Shape;
                 default:
                     return DisplayType.None;
             }
@@ -295,6 +329,48 @@ namespace DragonBones
             }
         }
 
+
+        protected static PositionMode _GetPositionMode(int value)
+        {
+            switch (value) {
+                case 1:
+                    return PositionMode.Percent;
+
+                case 0:
+                    return PositionMode.Fixed;
+
+                default:
+                    return PositionMode.Percent;
+            }
+        }
+
+        protected static SpacingMode _GetSpacingMode(int value) {
+            switch (value) {
+                case 0:
+                    return SpacingMode.Length;
+                case 2:
+                    return SpacingMode.Percent;
+                case 1:
+                    return SpacingMode.Fixed;
+                default:
+                    return SpacingMode.Length;
+            }
+        }
+
+        protected static RotateMode _GetRotateMode(int value)  {
+            switch (value) {
+                case 0:
+                    return RotateMode.Tangent;
+                case 1:
+                    return RotateMode.Chain;
+                case 2:
+                    return RotateMode.ChainScale;
+                case 3:
+                    return RotateMode.Snip;
+                default:
+                    return RotateMode.Tangent;
+            }
+        }
         public DataParser()
         {
 
