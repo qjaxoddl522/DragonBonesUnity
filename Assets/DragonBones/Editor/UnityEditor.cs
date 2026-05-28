@@ -494,8 +494,14 @@ namespace DragonBones
             EditorUtility.FocusProjectWindow();
             Selection.activeObject = gameObject;
             EditorGUIUtility.PingObject(Selection.activeObject);
+
             Undo.RegisterCreatedObjectUndo(gameObject, "Create Armature Object");
-            EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+            
+            // 只在非播放模式下标记场景为脏
+            if (!EditorApplication.isPlaying)
+            {
+                EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+            }
 
             return armatureComponent;
         }

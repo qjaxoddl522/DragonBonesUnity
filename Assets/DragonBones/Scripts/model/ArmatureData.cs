@@ -356,7 +356,7 @@ namespace DragonBones
                 if (this.constraints.ContainsKey(value.name))
                 {
                     Helper.Assert(false, "Same constraint: " + value.name);
-                    this.slots[value.name].ReturnToPool();
+                    return;
                 }
 
                 this.constraints[value.name] = value;
