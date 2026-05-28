@@ -761,8 +761,8 @@ namespace DragonBones
                                 var mass = this._massInverse * this._fpsTime;
                                 var strength = this._strength;
                                 var wind = this._wind + windDisturbance;
-                                var gravity = (armatureYDown ? this._gravity : -this._gravity);
-                                var boneLen = boneLength / armatureScale;
+                                var gravity = (armatureYDown ? -this._gravity : this._gravity);
+                                var boneLen = boneLength;
                                 if (this._fpsTime <= 0)
                                 {
                                     return;
