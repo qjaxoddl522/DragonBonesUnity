@@ -406,7 +406,15 @@ namespace DragonBones
                     }
                     if (this._rotateWeight != 0)
                     {
-                        var targetRotate = Transform.NormalizeRadian(targetGlobalTransform.rotation - offsetRotation);
+                        var targetRotate = 0.0f;
+                        if(DragonBones.yDown)
+                        {
+                            targetRotate = Transform.NormalizeRadian(targetGlobalTransform.rotation + offsetRotation);
+                        }
+                        else
+                        {
+                            targetRotate = Transform.NormalizeRadian(targetGlobalTransform.rotation - offsetRotation);
+                        }
                         this._root.global.rotation = this._root.global.rotation * (1 - this._rotateWeight) + (targetRotate) * this._rotateWeight;
                     }
                     if (this._scaleWeight != 0)
