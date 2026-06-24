@@ -1521,6 +1521,62 @@ namespace DragonBones
                 }
             }
 
+            if (rawData.ContainsKey(ObjectDataParser.PATH_CONSTRAINT))
+            {
+                var rawTimelines = rawData[ObjectDataParser.PATH_CONSTRAINT] as List<object>;
+                foreach (Dictionary<string, object> rawTimeline in rawTimelines)
+                {
+                    var constraintName = ObjectDataParser._GetString(rawTimeline, ObjectDataParser.NAME, "");
+                    var constraint = this._armature.GetConstraint(constraintName);
+                    if (constraint == null)
+                    {
+                        continue;
+                    }
+
+                    if (rawTimeline.ContainsKey(ObjectDataParser.PATH_CONSTRAINT_POSITION))
+                    {
+                        var timeline = this._ParseTimeline(
+                            rawTimeline, null, ObjectDataParser.PATH_CONSTRAINT_POSITION, TimelineType.PathConstraintPosition,
+                            false, true, 1,
+                            this._ParsePathConstraintFrame
+                        );
+
+                        if (timeline != null)
+                        {
+                            this._animation.AddConstraintTimeline(constraint, timeline);
+                        }
+                    }
+
+                    if (rawTimeline.ContainsKey(ObjectDataParser.PATH_CONSTRAINT_SPACING))
+                    {
+                        var timeline = this._ParseTimeline(
+                            rawTimeline, null, ObjectDataParser.PATH_CONSTRAINT_SPACING, TimelineType.PathConstraintSpacing,
+                            false, true, 1,
+                            this._ParsePathConstraintFrame
+                        );
+
+                        if (timeline != null)
+                        {
+                            this._animation.AddConstraintTimeline(constraint, timeline);
+                        }
+                    }
+
+                    if (rawTimeline.ContainsKey(ObjectDataParser.PATH_CONSTRAINT_WEIGHT))
+                    {
+                        var timeline = this._ParseTimeline(
+                            rawTimeline, null, ObjectDataParser.PATH_CONSTRAINT_WEIGHT, TimelineType.PathConstraintWeight,
+                            false, true, 3,
+                            this._ParsePathConstraintWeightFrame
+                        );
+
+                        if (timeline != null)
+                        {
+                            this._animation.AddConstraintTimeline(constraint, timeline);
+                        }
+                    }
+                }
+            }
+
             if (this._actionFrames.Count > 0)
             {
                 var timeline = this._animation.actionTimeline = BaseObject.BorrowObject<TimelineData>();
@@ -2277,6 +2333,31 @@ namespace DragonBones
                 this._frameIntArray[frameIntOffset + (int)BinaryOffset.DeformFloatOffset] = (short)(frameFloatOffset - this._animation.frameFloatOffset);// fixed ffd timeline mesh bound
                 this._timelineArray[(int)this._timeline.offset + (int)BinaryOffset.TimelineFrameValueCount] = (ushort)(frameIntOffset - this._animation.frameIntOffset);
             }
+
+            return frameOffset;
+        }
+
+        protected int _ParsePathConstraintFrame(Dictionary<string, object> rawData, int frameStart, int frameCount)
+        {
+            var frameOffset = this._ParseTweenFrame(rawData, frameStart, frameCount);
+
+            var frameFloatOffset = this._frameFloatArray.Count;
+            this._frameFloatArray.ResizeList(this._frameFloatArray.Count + 1);
+            this._frameFloatArray[frameFloatOffset] = ObjectDataParser._GetNumber(rawData, ObjectDataParser.VALUE, 0.0f);
+
+            return frameOffset;
+        }
+
+        protected int _ParsePathConstraintWeightFrame(Dictionary<string, object> rawData, int frameStart, int frameCount)
+        {
+            var frameOffset = this._ParseTweenFrame(rawData, frameStart, frameCount);
+
+            var rawValue = rawData.ContainsKey(ObjectDataParser.VALUE) ? rawData[ObjectDataParser.VALUE] as List<object> : null;
+            var frameFloatOffset = this._frameFloatArray.Count;
+            this._frameFloatArray.ResizeList(this._frameFloatArray.Count + 3);
+            this._frameFloatArray[frameFloatOffset++] = rawValue != null && rawValue.Count > 0 ? Convert.ToSingle(rawValue[0]) : 1.0f;
+            this._frameFloatArray[frameFloatOffset++] = rawValue != null && rawValue.Count > 1 ? Convert.ToSingle(rawValue[1]) : 1.0f;
+            this._frameFloatArray[frameFloatOffset++] = rawValue != null && rawValue.Count > 2 ? Convert.ToSingle(rawValue[2]) : 1.0f;
 
             return frameOffset;
         }

@@ -1733,7 +1733,7 @@ namespace DragonBones
         }
 
         public override void InvalidUpdate() {
-
+            this.dirty = true;
         }
     }
 }

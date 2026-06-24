@@ -1044,6 +1044,231 @@ namespace DragonBones
 
     /// <internal/>
     /// <private/>
+    internal abstract class PathConstraintTimelineState : ConstraintTimelineState
+    {
+        protected void _ResetToPose(PathConstraint pathConstraint)
+        {
+            var pathConstraintData = pathConstraint._constraintData as PathConstraintData;
+            pathConstraint.position = pathConstraintData.position;
+            pathConstraint.spacing = pathConstraintData.spacing;
+            pathConstraint.rotateWeight = pathConstraintData.rotateWeight;
+            pathConstraint.xWeight = pathConstraintData.xWeight;
+            pathConstraint.yWeight = pathConstraintData.yWeight;
+        }
+    }
+
+    /// <internal/>
+    /// <private/>
+    internal abstract class PathConstraintSingleValueTimelineState : PathConstraintTimelineState
+    {
+        private float _current;
+        private float _delta;
+        protected float _result;
+
+        protected override void _OnClear()
+        {
+            base._OnClear();
+
+            this._current = 0.0f;
+            this._delta = 0.0f;
+            this._result = 0.0f;
+        }
+
+        protected override void _OnArriveAtFrame()
+        {
+            base._OnArriveAtFrame();
+
+            if (this._timelineData != null)
+            {
+                var valueOffset = this._animationData.frameFloatOffset + this._frameValueOffset + this._frameIndex;
+                var frameFloatArray = this._frameFloatArray;
+
+                if (this._tweenState == TweenState.Always)
+                {
+                    this._current = frameFloatArray[valueOffset];
+
+                    if (this._frameIndex == this._frameCount - 1)
+                    {
+                        valueOffset = this._animationData.frameFloatOffset + this._frameValueOffset;
+                    }
+                    else
+                    {
+                        valueOffset++;
+                    }
+
+                    this._delta = frameFloatArray[valueOffset] - this._current;
+                }
+                else
+                {
+                    this._result = frameFloatArray[valueOffset];
+                    this._delta = 0.0f;
+                }
+            }
+            else
+            {
+                this._result = 0.0f;
+                this._delta = 0.0f;
+            }
+        }
+
+        protected override void _OnUpdateFrame()
+        {
+            base._OnUpdateFrame();
+
+            if (this._tweenState == TweenState.Always)
+            {
+                this._result = this._current + this._delta * this._tweenProgress;
+            }
+            else
+            {
+                this._tweenState = TweenState.None;
+            }
+        }
+    }
+
+    /// <internal/>
+    /// <private/>
+    internal class PathConstraintPositionTimelineState : PathConstraintSingleValueTimelineState
+    {
+        protected override void _OnUpdateFrame()
+        {
+            base._OnUpdateFrame();
+
+            var pathConstraint = this.constraint as PathConstraint;
+            if (this._timelineData != null)
+            {
+                pathConstraint.position = this._result;
+            }
+            else
+            {
+                this._ResetToPose(pathConstraint);
+            }
+
+            pathConstraint.InvalidUpdate();
+        }
+    }
+
+    /// <internal/>
+    /// <private/>
+    internal class PathConstraintSpacingTimelineState : PathConstraintSingleValueTimelineState
+    {
+        protected override void _OnUpdateFrame()
+        {
+            base._OnUpdateFrame();
+
+            var pathConstraint = this.constraint as PathConstraint;
+            if (this._timelineData != null)
+            {
+                pathConstraint.spacing = this._result;
+            }
+            else
+            {
+                this._ResetToPose(pathConstraint);
+            }
+
+            pathConstraint.InvalidUpdate();
+        }
+    }
+
+    /// <internal/>
+    /// <private/>
+    internal class PathConstraintWeightTimelineState : PathConstraintTimelineState
+    {
+        private const int _ValueCount = 3;
+        private readonly List<float> _current = new List<float>();
+        private readonly List<float> _result = new List<float>();
+        private readonly List<float> _delta = new List<float>();
+
+        protected override void _OnClear()
+        {
+            base._OnClear();
+
+            this._current.Clear();
+            this._result.Clear();
+            this._delta.Clear();
+        }
+
+        protected override void _OnArriveAtFrame()
+        {
+            base._OnArriveAtFrame();
+
+            this._current.ResizeList(PathConstraintWeightTimelineState._ValueCount);
+            this._result.ResizeList(PathConstraintWeightTimelineState._ValueCount);
+            this._delta.ResizeList(PathConstraintWeightTimelineState._ValueCount);
+
+            if (this._timelineData != null)
+            {
+                var valueOffset = this._animationData.frameFloatOffset + this._frameValueOffset + this._frameIndex * PathConstraintWeightTimelineState._ValueCount;
+                var frameFloatArray = this._frameFloatArray;
+
+                if (this._tweenState == TweenState.Always)
+                {
+                    var nextValueOffset = this._frameIndex == this._frameCount - 1 ?
+                        this._animationData.frameFloatOffset + this._frameValueOffset :
+                        valueOffset + PathConstraintWeightTimelineState._ValueCount;
+
+                    for (var i = 0; i < PathConstraintWeightTimelineState._ValueCount; ++i)
+                    {
+                        this._current[i] = frameFloatArray[valueOffset + i];
+                        this._result[i] = this._current[i];
+                        this._delta[i] = frameFloatArray[nextValueOffset + i] - this._current[i];
+                    }
+                }
+                else
+                {
+                    for (var i = 0; i < PathConstraintWeightTimelineState._ValueCount; ++i)
+                    {
+                        this._current[i] = frameFloatArray[valueOffset + i];
+                        this._result[i] = this._current[i];
+                        this._delta[i] = 0.0f;
+                    }
+                }
+            }
+            else
+            {
+                for (var i = 0; i < PathConstraintWeightTimelineState._ValueCount; ++i)
+                {
+                    this._current[i] = 0.0f;
+                    this._result[i] = 0.0f;
+                    this._delta[i] = 0.0f;
+                }
+            }
+        }
+
+        protected override void _OnUpdateFrame()
+        {
+            base._OnUpdateFrame();
+
+            var pathConstraint = this.constraint as PathConstraint;
+            if (this._timelineData != null)
+            {
+                if (this._tweenState == TweenState.Always)
+                {
+                    for (var i = 0; i < PathConstraintWeightTimelineState._ValueCount; ++i)
+                    {
+                        this._result[i] = this._current[i] + this._delta[i] * this._tweenProgress;
+                    }
+                }
+                else
+                {
+                    this._tweenState = TweenState.None;
+                }
+
+                pathConstraint.rotateWeight = this._result[0];
+                pathConstraint.xWeight = this._result[1];
+                pathConstraint.yWeight = this._result[2];
+            }
+            else
+            {
+                this._ResetToPose(pathConstraint);
+            }
+
+            pathConstraint.InvalidUpdate();
+        }
+    }
+
+    /// <internal/>
+    /// <private/>
     internal class IKConstraintTimelineState : ConstraintTimelineState
     {
         private float _current;

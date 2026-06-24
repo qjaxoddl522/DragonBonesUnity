@@ -336,6 +336,33 @@ namespace DragonBones
                                         break;
                                     }
 
+                                case TimelineType.PathConstraintPosition:
+                                    {
+                                        var timeline = BaseObject.BorrowObject<PathConstraintPositionTimelineState>();
+                                        timeline.constraint = constraint;
+                                        timeline.Init(this._armature, this, timelineData);
+                                        this._constraintTimelines.Add(timeline);
+                                        break;
+                                    }
+
+                                case TimelineType.PathConstraintSpacing:
+                                    {
+                                        var timeline = BaseObject.BorrowObject<PathConstraintSpacingTimelineState>();
+                                        timeline.constraint = constraint;
+                                        timeline.Init(this._armature, this, timelineData);
+                                        this._constraintTimelines.Add(timeline);
+                                        break;
+                                    }
+
+                                case TimelineType.PathConstraintWeight:
+                                    {
+                                        var timeline = BaseObject.BorrowObject<PathConstraintWeightTimelineState>();
+                                        timeline.constraint = constraint;
+                                        timeline.Init(this._armature, this, timelineData);
+                                        this._constraintTimelines.Add(timeline);
+                                        break;
+                                    }
+
                                 default:
                                     break;
                             }
@@ -343,11 +370,28 @@ namespace DragonBones
                     }
                     else if (this.resetToPose)
                     { // Pose timeline.
-                        var timeline = BaseObject.BorrowObject<IKConstraintTimelineState>();
-                        timeline.constraint = constraint;
-                        timeline.Init(this._armature, this, null);
-                        this._constraintTimelines.Add(timeline);
-                        this._poseTimelines.Add(timeline);
+                        ConstraintTimelineState timeline = null;
+                        switch (constraint._constraintData.type)
+                        {
+                            case ConstraintType.IK:
+                                timeline = BaseObject.BorrowObject<IKConstraintTimelineState>();
+                                break;
+
+                            case ConstraintType.Path:
+                                timeline = BaseObject.BorrowObject<PathConstraintPositionTimelineState>();
+                                break;
+
+                            default:
+                                break;
+                        }
+
+                        if (timeline != null)
+                        {
+                            timeline.constraint = constraint;
+                            timeline.Init(this._armature, this, null);
+                            this._constraintTimelines.Add(timeline);
+                            this._poseTimelines.Add(timeline);
+                        }
                     }
                 }
             }

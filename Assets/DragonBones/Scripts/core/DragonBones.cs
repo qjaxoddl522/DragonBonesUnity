@@ -162,6 +162,9 @@ namespace DragonBones
         SlotDeform = 22,
 
         IKConstraint = 30,
+        PathConstraintPosition = 31,
+        PathConstraintSpacing = 32,
+        PathConstraintWeight = 33,
 
         AnimationTime = 40,
         AnimationWeight = 41
