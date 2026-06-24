@@ -200,6 +200,7 @@ namespace DragonBones
         protected MeshDisplayData _mesh = null; //
         protected AnimationData _animation = null; //
         protected TimelineData _timeline = null; //
+        protected PathConstraintData _pathConstraint = null; //
         protected List<object> _rawTextureAtlases = null;
 
         private int _defaultColorOffset = -1;
@@ -841,8 +842,8 @@ namespace DragonBones
             constraint.positionMode = DataParser._GetPositionMode(ObjectDataParser._GetNumber(rawData, DataParser.POSITION_MODE, 0)); //PositionMode.Fixed
             constraint.spacingMode = DataParser._GetSpacingMode(ObjectDataParser._GetNumber(rawData, DataParser.SPACING_MODE, 1)); //SpacingMode.Fixed
             constraint.rotateMode = DataParser._GetRotateMode(ObjectDataParser._GetNumber(rawData, DataParser.ROTATE_MODE, 0)); //RotateMode.Tangent
-            constraint.position = ObjectDataParser._GetNumber(rawData, DataParser.POSITION, 0);
-            constraint.spacing = ObjectDataParser._GetNumber(rawData, DataParser.SPACING, 0);
+            constraint.position = ObjectDataParser._GetNumber(rawData, DataParser.POSITION, 0) * (constraint.positionMode == PositionMode.Percent ? 1.0f : scale);
+            constraint.spacing = ObjectDataParser._GetNumber(rawData, DataParser.SPACING, 0) * (constraint.spacingMode == SpacingMode.Percent ? 1.0f : scale);
             constraint.rotateOffset = ObjectDataParser._GetNumber(rawData, DataParser.ROTATE_OFFSET, 0);
             constraint.rotateWeight = ObjectDataParser._GetNumber(rawData, DataParser.ROTATE_WEIGHT, 1);
             constraint.xWeight = ObjectDataParser._GetNumber(rawData, DataParser.X_WEIGHT, 1);
@@ -1045,7 +1046,7 @@ namespace DragonBones
                     pathDisplay.curveLengths.ResizeList(l);
                     for (i = 0; i < l; ++i)
                     {
-                        pathDisplay.curveLengths[i] = rawCurveLengths[i];
+                        pathDisplay.curveLengths[i] = rawCurveLengths[i] * this._armature.scale;
                     }
 
                     this._ParsePath(rawData, pathDisplay);
@@ -1533,6 +1534,8 @@ namespace DragonBones
                         continue;
                     }
 
+                    this._pathConstraint = constraint as PathConstraintData;
+
                     if (rawTimeline.ContainsKey(ObjectDataParser.PATH_CONSTRAINT_POSITION))
                     {
                         var timeline = this._ParseTimeline(
@@ -1574,6 +1577,8 @@ namespace DragonBones
                             this._animation.AddConstraintTimeline(constraint, timeline);
                         }
                     }
+
+                    this._pathConstraint = null;
                 }
             }
 
@@ -1637,6 +1642,7 @@ namespace DragonBones
             }
 
             this._animation = null; //
+            this._pathConstraint = null; //
 
             return animation;
         }
@@ -2341,9 +2347,23 @@ namespace DragonBones
         {
             var frameOffset = this._ParseTweenFrame(rawData, frameStart, frameCount);
 
+            var value = ObjectDataParser._GetNumber(rawData, ObjectDataParser.VALUE, 0.0f);
+            if (this._pathConstraint != null)
+            {
+                var type = this._timeline.type;
+                if (type == TimelineType.PathConstraintPosition && this._pathConstraint.positionMode != PositionMode.Percent)
+                {
+                    value *= this._armature.scale;
+                }
+                else if (type == TimelineType.PathConstraintSpacing && this._pathConstraint.spacingMode != SpacingMode.Percent)
+                {
+                    value *= this._armature.scale;
+                }
+            }
+
             var frameFloatOffset = this._frameFloatArray.Count;
             this._frameFloatArray.ResizeList(this._frameFloatArray.Count + 1);
-            this._frameFloatArray[frameFloatOffset] = ObjectDataParser._GetNumber(rawData, ObjectDataParser.VALUE, 0.0f);
+            this._frameFloatArray[frameFloatOffset] = value;
 
             return frameOffset;
         }

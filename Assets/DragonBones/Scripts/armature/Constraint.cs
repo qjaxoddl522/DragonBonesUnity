@@ -957,8 +957,7 @@ namespace DragonBones
             //计算曲线的节点数据
             var armature = this._armature;
             var dragonBonesData = armature.armatureData.parent;
-            // var scale = armature.armatureData.scale;
-            var scale = 0.01f;
+            var scale = armature.armatureData.scale;
             var intArray = dragonBonesData.intArray;
             var floatArray = dragonBonesData.floatArray;
 
