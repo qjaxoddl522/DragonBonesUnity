@@ -30,7 +30,6 @@ namespace DragonBones
     internal abstract class Constraint : BaseObject
     {
         protected static readonly Matrix _helpMatrix = new Matrix();
-        protected static readonly Transform _helpTransform = new Transform();
         protected static readonly Point _helpPoint = new Point();
 
         /// <summary>

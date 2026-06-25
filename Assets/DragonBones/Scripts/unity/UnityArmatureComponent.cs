@@ -145,7 +145,7 @@ namespace DragonBones
                     }
                     catch (System.Exception e)
                     {
-
+                        UnityEngine.Debug.LogException(e);
                     }
                 }
             }
