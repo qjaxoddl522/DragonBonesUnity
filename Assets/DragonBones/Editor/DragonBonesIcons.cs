@@ -59,14 +59,14 @@ namespace DragonBones
             textureImg = AssetDatabase.LoadAssetAtPath<Texture2D>(editorGUIPath + "/icon-image.png");
             textureMesh = AssetDatabase.LoadAssetAtPath<Texture2D>(editorGUIPath + "/icon-mesh.png");
 
-            EditorApplication.hierarchyWindowItemOnGUI -= HierarchyIconsOnGUI;
-            EditorApplication.hierarchyWindowItemOnGUI += HierarchyIconsOnGUI;
+            EditorApplication.hierarchyWindowItemByEntityIdOnGUI -= HierarchyIconsOnGUI;
+            EditorApplication.hierarchyWindowItemByEntityIdOnGUI += HierarchyIconsOnGUI;
             isInited = true;
         }
 
-        static void HierarchyIconsOnGUI(int instanceId, Rect selectionRect)
+        static void HierarchyIconsOnGUI(EntityId entityId, Rect selectionRect)
         {
-            GameObject go = (GameObject)EditorUtility.InstanceIDToObject(instanceId);
+            GameObject go = (GameObject)EditorUtility.EntityIdToObject(entityId);
             if (!go)
             {
                 return;
